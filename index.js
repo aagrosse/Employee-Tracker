@@ -90,20 +90,20 @@ function viewRoles() {
 
 //Add Employee
 function addEmployee () {
-    connection.query('SELECT * from role; SELECT CONCAT (e.first_name," ",e.last_name) AS full_name FROM employees e', (err, results) => {
+    connection.query('SELECT * from role; SELECT CONCAT (e.first_name," ",e.last_name) AS full_name FROM employee e', (err, results) => {
         if (err) throw err;
-
+console.log(results);
         inquirer.prompt([
             {
                 name: 'first_name',
                 type: 'input',
-                message: addEmployeeQuestions[0]
+                message: 'What is the first name?'
 
             },
             {
                 name: 'last_name',
                 type: 'input',
-                message: addEmployeeQuestions[1]
+                message: 'What is the last name?'
             },
             {
                 name: 'role',
@@ -127,9 +127,9 @@ function addEmployee () {
             }
         ]).then((answer) => {
             connection.query(
-                `INSERT INTO employees(first_name, last_name, role_id, manager_id) VALUES(?, ?, 
-                (SELECT id FROM roles WHERE title = ? ), 
-                (SELECT id FROM (SELECT id FROM employees WHERE CONCAT(first_name," ",last_name) = ? ) AS tmptable))`, [answer.fName, answer.lName, answer.role, answer.manager]
+                `INSERT INTO employee(first_name, last_name, role_id, manager_id) VALUES(?, ?, 
+                (SELECT id FROM role WHERE title = ? ), 
+                (SELECT id FROM (SELECT id FROM employee WHERE CONCAT(first_name," ",last_name) = ? ) AS tmptable))`, [answer.first_name, answer.last_name, answer.role, answer.manager]
             )
             mainPrompts();
         })
@@ -163,7 +163,7 @@ function addDepartment () {
 
 
 //Add Roles
-const addRoles = () => {
+function addRoles () {
     connection.query("SELECT * FROM role; SELECT * FROM department", (err, results) => {
         if (err) throw err;
 
@@ -205,4 +205,39 @@ const addRoles = () => {
 
 }
 
-//Update Employee
+//Update Employee Role
+function updateEmployee() {
+    connection.query(`SELECT CONCAT (first_name," ",last_name) AS full_name FROM employee; SELECT title FROM role`, (err, results) => {
+        if (err) throw err;
+
+        inquirer.prompt([
+            {
+                name: 'empl',
+                type: 'list',
+                choices: function () {
+                    let choiceArray = results[0].map(choice => choice.full_name);
+                    return choiceArray;
+                },
+                message: 'Select an employee to update their role:'
+            },
+            {
+                name: 'newRole',
+                type: 'list',
+                choices: function () {
+                    let choiceArray = results[1].map(choice => choice.title);
+                    return choiceArray;
+                }
+            }
+        ]).then((answer) => {
+            connection.query(`UPDATE employee 
+            SET role_id = (SELECT id FROM role WHERE title = ? ) 
+            WHERE id = (SELECT id FROM(SELECT id FROM employee WHERE CONCAT(first_name," ",last_name) = ?) AS tmptable)`, [answer.newRole, answer.empl], (err, results) => {
+                    if (err) throw err;
+                    mainPrompts();
+                })
+        })
+
+
+    })
+
+}
